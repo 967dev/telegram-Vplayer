@@ -217,12 +217,14 @@
         audioPlayer.volume = 0.75;
         
         const builtInBacks = [
-            'https://i.imgur.com/xyKLleZ.jpeg',
-            'https://i.imgur.com/Kyp3y6s.jpeg',
-            'https://i.imgur.com/sa79H6d.jpeg',
-            'https://i.imgur.com/7C2GZ0s.jpeg',
-            'https://i.imgur.com/4z8wj44.jpeg',
-            'https://i.imgur.com/d9IqemD.jpeg'
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/1.png?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/11.jpg?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/12.jpg?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/13.jpg?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/14.jpg?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/36.jpg?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/37.jpg?raw=true',
+            'https://github.com/967dev/telegram-Vplayer/blob/main/back/9.jpg?raw=true'
         ];
 
         function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
