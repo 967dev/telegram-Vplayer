@@ -64,7 +64,7 @@
             0%   { transform: translateX(0); }
             100% { transform: translateX(-100%); }
         }
-        #playlistContainer {
+        main {
             -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 80px, black calc(100% - 80px), transparent 100%);
             mask-image: linear-gradient(to bottom, transparent 0%, black 80px, black calc(100% - 80px), transparent 100%);
         }
@@ -103,7 +103,10 @@
     <div id="app" class="relative flex flex-col h-screen max-w-md mx-auto bg-transparent shadow-2xl overflow-hidden">
         <canvas id="visualizerCanvas"></canvas>
         <header class="relative p-4 bg-transparent z-10 text-center">
-            <h1 class="text-xl font-bold mb-4">My Music</h1>
+            <div class="flex justify-center items-center gap-2 mb-4">
+                <button id="modePlaylistBtn" class="accent-bg text-white font-bold py-2 px-5 rounded-full transition-colors">My Music</button>
+                <button id="modeRadioBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-full transition-colors">Radio</button>
+            </div>
             <div class="flex justify-center items-center gap-2">
                 <button id="togglePlaylistBtn" title="Toggle Playlist" class="accent-bg text-white font-bold py-3 px-4 rounded-full transition-colors flex-shrink-0">
                      <i class="fas fa-bars"></i>
@@ -129,6 +132,10 @@
                  <p class="text-sm">Your playlist is empty</p>
             </div>
         </main>
+        
+        <main id="radioContainer" class="hidden relative flex-grow p-4 overflow-y-auto pb-40 z-10 space-y-2">
+            <!-- Radio stations will be populated here -->
+        </main>
 
         <footer id="player" class="relative fixed bottom-0 left-0 right-0 bg-black/30 backdrop-blur-xl border-t border-white/10 p-3 max-w-md mx-auto rounded-t-2xl transition-transform duration-300 translate-y-full z-20">
             <div class="flex items-center">
@@ -140,7 +147,7 @@
                     <p id="currentTrackArtist" class="text-sm text-gray-400 truncate">Nothing is playing</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2 text-xs text-gray-400 mt-3">
+            <div id="progressWrapper" class="flex items-center gap-2 text-xs text-gray-400 mt-3">
                 <span id="currentTime">0:00</span>
                 <input type="range" id="progressBar" value="0" max="100" class="flex-grow">
                 <span id="totalTime">0:00</span>
@@ -186,6 +193,7 @@
         const canvasCtx = canvas.getContext('2d');
         const audioUpload = document.getElementById('audioUpload');
         const playlistContainer = document.getElementById('playlistContainer');
+        const radioContainer = document.getElementById('radioContainer');
         const player = document.getElementById('player');
         const currentTrackArt = document.getElementById('currentTrackArt');
         const currentTrackTitle = document.getElementById('currentTrackTitle');
@@ -196,6 +204,7 @@
         const pauseIcon = document.getElementById('pauseIcon');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
+        const progressWrapper = document.getElementById('progressWrapper');
         const progressBar = document.getElementById('progressBar');
         const currentTime = document.getElementById('currentTime');
         const totalTime = document.getElementById('totalTime');
@@ -208,62 +217,128 @@
         const closeBgModal = document.getElementById('closeBgModal');
         const bgUpload = document.getElementById('bgUpload');
         const togglePlaylistBtn = document.getElementById('togglePlaylistBtn');
+        const modePlaylistBtn = document.getElementById('modePlaylistBtn');
+        const modeRadioBtn = document.getElementById('modeRadioBtn');
 
         // State & Visualizer
-        let playlist = [], currentIndex = -1, isPlaying = false, db;
+        let playlist = [], radioStations = [], currentRadioIndex = -1, currentIndex = -1, isPlaying = false, db;
         let audioContext, analyser, sourceNode, dataArray;
         let animationFrameId = null;
         let equalizerEnabled = true;
         let colorThief;
+        let currentMode = 'playlist'; // 'playlist' or 'radio'
 
         audioPlayer.volume = 0.75;
         
-        const builtInBacks = [
-            'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg',
-            'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg'
+        // --- BUILT-IN DATA ---
+        const builtInBacks = [ 'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg', 'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg' ];
+        const builtInRadioStations = [
+            { name: "Lofi Girl", genre: "24/7 lofi hip hop beats", streamUrl: "http://stream.lofigirl.com/lofi", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
+            { name: "Europa Plus", genre: "Pop Music", streamUrl: "http://ep256.hostingradio.ru:8052/europaplus256.mp3", artUrl: "https://i.imgur.com/O61z43j.png" },
+            { name: "Retro FM", genre: "70s, 80s, 90s Hits", streamUrl: "https://retroserver.streamr.ru:8043/retro256.mp3", artUrl: "https://i.imgur.com/l2TCtV8.png" },
+            { name: "DFM 101.2", genre: "Dance Music", streamUrl: "https://dfm.hostingradio.ru:8000/dfm64.mp3", artUrl: "https://i.imgur.com/gK0Z2oR.png" },
+            { name: "NTS Radio", genre: "Alternative", streamUrl: "http://stream-relay-geo.ntslive.net/stream", artUrl: "https://i.imgur.com/mY7zKmn.png" },
         ];
         
-        function handleParallax(e) {
-            const { innerWidth: width, innerHeight: height } = window;
-            let x, y;
-            let strength; // Use a variable for strength
-
-            // Check if it's a device orientation event (mobile)
-            if (e.gamma !== undefined && e.beta !== undefined) {
-                strength = 30; // Increased strength for mobile tilt
-                x = (e.gamma + 90) * (width / 180);
-                y = (e.beta + 90) * (height / 180);
-            } else { // It's a mouse event (desktop)
-                strength = 15; // Default strength for mouse
-                x = e.clientX;
-                y = e.clientY;
+        // --- LOGIC ---
+        function setMode(mode) {
+            currentMode = mode;
+            localStorage.setItem('player_mode', mode);
+            if (mode === 'playlist') {
+                playlistContainer.classList.remove('hidden');
+                radioContainer.classList.add('hidden');
+                modePlaylistBtn.classList.add('accent-bg');
+                modePlaylistBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                modeRadioBtn.classList.remove('accent-bg');
+                modeRadioBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+            } else { // radio
+                playlistContainer.classList.add('hidden');
+                radioContainer.classList.remove('hidden');
+                modeRadioBtn.classList.add('accent-bg');
+                modeRadioBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                modePlaylistBtn.classList.remove('accent-bg');
+                modePlaylistBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
             }
-
-            const xPercent = (x / width - 0.5) * 2;
-            const yPercent = (y / height - 0.5) * 2;
-
-            const offsetX = -xPercent * strength;
-            const offsetY = -yPercent * strength;
-
-            imageBg.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
         }
 
-        // --- All other functions (unchanged from the working version) ---
-        function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
-        function loadBackgrounds() {
-            bgGrid.innerHTML = '';
-            builtInBacks.forEach(url => {
-                const imgContainer = document.createElement('div');
-                imgContainer.className = 'cursor-pointer aspect-square rounded-md overflow-hidden transition-transform hover:scale-105';
-                imgContainer.innerHTML = `<img src="${url}" class="w-full h-full object-cover" loading="lazy">`;
-                imgContainer.onclick = () => selectBackground(url);
-                bgGrid.appendChild(imgContainer);
+        function displayRadioStations() {
+            radioContainer.innerHTML = '';
+            builtInRadioStations.forEach((station, index) => {
+                const stationEl = document.createElement('div');
+                stationEl.className = 'track-item flex items-center justify-between p-3 rounded-xl bg-black/20 backdrop-blur-lg border border-white/5 hover:bg-black/40 cursor-pointer transition-colors duration-200';
+                stationEl.innerHTML = `
+                    <div class="flex items-center flex-grow overflow-hidden mr-2 w-0 min-w-0">
+                        <img src="${station.artUrl}" class="w-12 h-12 rounded-md mr-4 bg-white/10 flex-shrink-0 object-cover">
+                        <div class="flex-grow overflow-hidden w-0 min-w-0">
+                            <p class="font-semibold truncate">${station.name}</p>
+                            <p class="text-sm text-gray-400 truncate">${station.genre}</p>
+                        </div>
+                    </div>`;
+                stationEl.addEventListener('click', () => playRadioStation(index));
+                radioContainer.appendChild(stationEl);
             });
         }
+        
+        function playRadioStation(index) {
+            if (index < 0 || index >= builtInRadioStations.length) return;
+            if (!audioContext) setupVisualizer();
+            
+            currentRadioIndex = index;
+            const station = builtInRadioStations[index];
+            
+            audioPlayer.src = station.streamUrl;
+            currentTrackTitle.textContent = station.name;
+            currentTrackArtist.textContent = station.genre;
+            currentTrackArt.src = station.artUrl;
+            progressWrapper.classList.add('hidden'); // Hide progress bar for streams
+            
+            audioPlayer.play().then(() => {
+                if (audioContext.state === 'suspended') audioContext.resume();
+                setPlayingState(true);
+                player.classList.remove('translate-y-full');
+            }).catch(e => { console.error("Radio playback error:", e); setPlayingState(false); });
+        }
+        
+        // --- Modified Player Controls ---
+        function togglePlayPause() {
+            if(currentMode === 'playlist') {
+                if (currentIndex === -1 && playlist.length > 0) return playTrack(0);
+                if (currentIndex === -1) return;
+            } else { // radio
+                if (currentRadioIndex === -1 && builtInRadioStations.length > 0) return playRadioStation(0);
+                if (currentRadioIndex === -1) return;
+            }
+            
+            const action = isPlaying ? 'pause' : 'play';
+            if (audioContext && audioContext.state === 'suspended') {
+                 audioContext.resume().then(() => audioPlayer[action]());
+            } else {
+                audioPlayer[action]();
+            }
+        }
+        function playNext() {
+            if (currentMode === 'playlist') {
+                playTrack((currentIndex + 1) % playlist.length || 0);
+            } else {
+                playRadioStation((currentRadioIndex + 1) % builtInRadioStations.length || 0);
+            }
+        }
+        function playPrev() {
+            if (currentMode === 'playlist') {
+                playTrack((currentIndex - 1 + playlist.length) % playlist.length || 0);
+            } else {
+                playRadioStation((currentRadioIndex - 1 + builtInRadioStations.length) % builtInRadioStations.length || 0);
+            }
+        }
+        
+        // --- The rest of the functions are mostly unchanged ---
+        function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
+        function loadBackgrounds() { bgGrid.innerHTML = ''; builtInBacks.forEach(url => { const imgContainer = document.createElement('div'); imgContainer.className = 'cursor-pointer aspect-square rounded-md overflow-hidden transition-transform hover:scale-105'; imgContainer.innerHTML = `<img src="${url}" class="w-full h-full object-cover" loading="lazy">`; imgContainer.onclick = () => selectBackground(url); bgGrid.appendChild(imgContainer); }); }
         function selectBackground(imageDataUrl) { localStorage.setItem('background_image', imageDataUrl); imageBg.style.backgroundImage = `url('${imageDataUrl}')`; updateAccentColor(imageDataUrl); bgModal.classList.add('hidden'); }
         function handleBgUpload(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => selectBackground(e.target.result); reader.readAsDataURL(file); }
         function loadSavedBackground() { const savedBg = localStorage.getItem('background_image'); if (savedBg) { imageBg.style.backgroundImage = `url('${savedBg}')`; updateAccentColor(savedBg); } else if (builtInBacks.length > 0) { const randomBg = builtInBacks[Math.floor(Math.random() * builtInBacks.length)]; imageBg.style.backgroundImage = `url('${randomBg}')`; updateAccentColor(randomBg); } else { imageBg.style.backgroundImage = 'none'; } }
         function animateVisualizer() { animationFrameId = requestAnimationFrame(animateVisualizer); if (!equalizerEnabled || !analyser) { if(canvasCtx) canvasCtx.clearRect(0, 0, canvas.width, canvas.height); return; } analyser.getByteFrequencyData(dataArray); canvasCtx.clearRect(0, 0, canvas.width, canvas.height); const isCollapsed = document.body.classList.contains('playlist-collapsed'); const primaryRgb = getComputedStyle(document.documentElement).getPropertyValue('--primary-color-rgb'); const waveCount = 3; const sliceWidth = canvas.width / dataArray.length; const baseline = isCollapsed ? canvas.height / 2 : canvas.height - (player.offsetHeight / 2) - 10; const amplitude = isCollapsed ? 150 : 80; for (let j = 0; j < waveCount; j++) { canvasCtx.beginPath(); canvasCtx.moveTo(0, baseline); canvasCtx.strokeStyle = `rgba(${primaryRgb}, ${0.8 - j * 0.2})`; canvasCtx.lineWidth = 3 - j; for (let i = 0; i < dataArray.length; i++) { const v = dataArray[i] / 255.0; const y = baseline - (v * amplitude * (1 - j * 0.2)); const x = i * sliceWidth; canvasCtx.lineTo(x, y); } canvasCtx.lineTo(canvas.width, baseline); canvasCtx.stroke(); } }
+        function handleParallax(e) { const { innerWidth: width, innerHeight: height } = window; let x, y; let strength; if (e.gamma !== undefined && e.beta !== undefined) { strength = 30; x = (e.gamma + 90) * (width / 180); y = (e.beta + 90) * (height / 180); } else { strength = 15; x = e.clientX; y = e.clientY; } const xPercent = (x / width - 0.5) * 2; const yPercent = (y / height - 0.5) * 2; const offsetX = -xPercent * strength; const offsetY = -yPercent * strength; imageBg.style.transform = `translate(${offsetX}px, ${offsetY}px)`; }
         function setupVisualizer() { if (audioContext) return; try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); sourceNode = audioContext.createMediaElementSource(audioPlayer); analyser = audioContext.createAnalyser(); analyser.fftSize = 256; sourceNode.connect(analyser); analyser.connect(audioContext.destination); dataArray = new Uint8Array(analyser.frequencyBinCount); resizeCanvas(); animateVisualizer(); } catch (e) { console.error("Could not initialize Web Audio API.", e); } }
         function resizeCanvas() { canvas.width = appContainer.clientWidth; canvas.height = appContainer.clientHeight; applyMarqueeToAll(); }
         function toggleEqualizer() { equalizerEnabled = !equalizerEnabled; toggleEqBtn.classList.toggle('accent-bg'); toggleEqBtn.classList.toggle('bg-gray-600', !equalizerEnabled); if (!equalizerEnabled && canvasCtx) canvasCtx.clearRect(0, 0, canvas.width, canvas.height); }
@@ -275,12 +350,9 @@
         function applyMarqueeIfNeeded(textElement) { const wrapper = textElement.parentElement; if (!wrapper) return; const shouldScroll = textElement.scrollWidth > wrapper.clientWidth; wrapper.classList.toggle('is-scrolling', shouldScroll); }
         function applyMarqueeToAll() { if(currentTrackTitle) applyMarqueeIfNeeded(currentTrackTitle); playlistContainer.querySelectorAll('.marquee-text').forEach(applyMarqueeIfNeeded); }
         function displayPlaylist() { playlistContainer.innerHTML = ''; initialMessage.classList.toggle('hidden', playlist.length > 0); playlist.forEach((track, index) => { const trackElement = document.createElement('div'); trackElement.className = 'track-item flex items-center justify-between p-3 rounded-xl bg-black/20 backdrop-blur-lg border border-white/5 hover:bg-black/40 cursor-pointer transition-colors duration-200'; const trackInfoContainer = document.createElement('div'); trackInfoContainer.className = 'flex items-center flex-grow overflow-hidden mr-2 w-0 min-w-0'; trackInfoContainer.innerHTML = `<div class="w-12 h-12 rounded-md mr-4 bg-white/10 flex items-center justify-center flex-shrink-0"><i class="fas fa-music text-gray-300 text-xl"></i></div><div class="flex-grow overflow-hidden w-0 min-w-0"><div class="marquee-wrapper"><p class="marquee-text font-semibold">${track.fileName}</p></div><p class="text-sm text-gray-400 truncate">${track.artistName}</p></div>`; trackInfoContainer.addEventListener('click', () => playTrack(index)); const deleteButton = document.createElement('button'); deleteButton.className = 'delete-btn flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-colors'; deleteButton.innerHTML = `<i class="fas fa-trash-alt"></i>`; deleteButton.addEventListener('click', (e) => { e.stopPropagation(); deleteTrack(index); }); trackElement.appendChild(trackInfoContainer); trackElement.appendChild(deleteButton); playlistContainer.appendChild(trackElement); applyMarqueeIfNeeded(trackElement.querySelector('.marquee-text')); }); updateActiveTrackUI(); }
-        function playTrack(index) { if (index < 0 || index >= playlist.length) return; if (!audioContext) setupVisualizer(); currentIndex = index; const trackInfo = playlist[currentIndex]; db.transaction('tracks').objectStore('tracks').get(trackInfo.id).onsuccess = (event) => { const fullTrack = event.target.result; const audioURL = URL.createObjectURL(fullTrack.file); if (audioPlayer.src.startsWith('blob:')) URL.revokeObjectURL(audioPlayer.src); audioPlayer.src = audioURL; currentTrackTitle.textContent = trackInfo.fileName; currentTrackArtist.textContent = trackInfo.artistName; setTimeout(() => applyMarqueeIfNeeded(currentTrackTitle), 100); audioPlayer.play().then(() => { if (audioContext.state === 'suspended') audioContext.resume(); setPlayingState(true); player.classList.remove('translate-y-full'); }).catch(e => console.error("Playback error:", e)); }; }
-        function togglePlayPause() { if (currentIndex === -1 && playlist.length > 0) return playTrack(0); if (currentIndex === -1) return; const action = isPlaying ? 'pause' : 'play'; if (audioContext && audioContext.state === 'suspended') { audioContext.resume().then(() => audioPlayer[action]()); } else { audioPlayer[action](); } }
+        function playTrack(index) { if (index < 0 || index >= playlist.length) return; if (!audioContext) setupVisualizer(); currentIndex = index; const trackInfo = playlist[currentIndex]; db.transaction('tracks').objectStore('tracks').get(trackInfo.id).onsuccess = (event) => { const fullTrack = event.target.result; const audioURL = URL.createObjectURL(fullTrack.file); if (audioPlayer.src.startsWith('blob:')) URL.revokeObjectURL(audioPlayer.src); audioPlayer.src = audioURL; currentTrackTitle.textContent = trackInfo.fileName; currentTrackArtist.textContent = "Local File"; currentTrackArt.src = "https://placehold.co/64x64/1f2937/4b5563?text=Music"; progressWrapper.classList.remove('hidden'); setTimeout(() => applyMarqueeIfNeeded(currentTrackTitle), 100); audioPlayer.play().then(() => { if (audioContext.state === 'suspended') audioContext.resume(); setPlayingState(true); player.classList.remove('translate-y-full'); }).catch(e => console.error("Playback error:", e)); }; }
         function setPlayingState(playing) { isPlaying = playing; playIcon.classList.toggle('hidden', isPlaying); pauseIcon.classList.toggle('hidden', !isPlaying); updateActiveTrackUI(); if (!audioContext) return; if (isPlaying && !animationFrameId) animateVisualizer(); else if (!isPlaying && animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } }
-        function playNext() { playTrack((currentIndex + 1) % playlist.length || 0); }
-        function playPrev() { playTrack((currentIndex - 1 + playlist.length) % playlist.length || 0); }
-        function updateActiveTrackUI() { playlistContainer.querySelectorAll('.track-item').forEach((el, index) => { const isCurrent = index === currentIndex; el.classList.remove('accent-bg-lite', 'accent-bg-lite-paused'); if (isCurrent && isPlaying) { el.classList.add('accent-bg-lite'); } else if (isCurrent && !isPlaying) { el.classList.add('accent-bg-lite-paused'); } }); }
+        function updateActiveTrackUI() { playlistContainer.querySelectorAll('.track-item').forEach((el, index) => { const isCurrent = index === currentIndex; el.classList.remove('accent-bg-lite', 'accent-bg-lite-paused'); if (isCurrent && isPlaying) { el.classList.add('accent-bg-lite'); } else if (isCurrent && !isPlaying) { el.classList.add('accent-bg-lite-paused'); } }); radioContainer.querySelectorAll('.track-item').forEach((el, index) => { const isCurrent = index === currentRadioIndex; el.classList.remove('accent-bg-lite', 'accent-bg-lite-paused'); if (isCurrent && isPlaying) { el.classList.add('accent-bg-lite'); } else if (isCurrent && !isPlaying) { el.classList.add('accent-bg-lite-paused'); } }); }
         function updateProgress() { const { duration, currentTime: time } = audioPlayer; const progressPercent = (time / duration) * 100; progressBar.value = isNaN(progressPercent) ? 0 : progressPercent; currentTime.textContent = formatTime(time); totalTime.textContent = isNaN(duration) ? '0:00' : formatTime(duration); }
         function setProgress() { const duration = audioPlayer.duration; if (!isNaN(duration)) audioPlayer.currentTime = (progressBar.value * duration) / 100; }
         function setVolume() { audioPlayer.volume = volumeSlider.value / 100; }
@@ -291,6 +363,9 @@
             colorThief = new ColorThief();
             initDB();
             loadSavedBackground();
+            displayRadioStations();
+            const savedMode = localStorage.getItem('player_mode') || 'playlist';
+            setMode(savedMode);
         });
         
         window.addEventListener('resize', resizeCanvas);
@@ -302,6 +377,8 @@
         changeBgBtn.addEventListener('click', () => { loadBackgrounds(); bgModal.classList.remove('hidden'); });
         closeBgModal.addEventListener('click', () => bgModal.classList.add('hidden'));
         bgUpload.addEventListener('change', handleBgUpload);
+        modePlaylistBtn.addEventListener('click', () => setMode('playlist'));
+        modeRadioBtn.addEventListener('click', () => setMode('radio'));
         playPauseBtn.addEventListener('click', togglePlayPause);
         nextBtn.addEventListener('click', playNext);
         prevBtn.addEventListener('click', playPrev);
