@@ -222,43 +222,34 @@
             'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg',
             'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg'
         ];
-
-        function updateAccentColor(imageUrl) {
-            const tempImg = new Image();
-            tempImg.crossOrigin = "Anonymous"; 
-            tempImg.src = imageUrl;
-            tempImg.onload = () => {
-                try {
-                    const palette = colorThief.getPalette(tempImg, 3);
-                    let bestColor = palette[0];
-                    let maxVibrancy = 0;
-                    palette.forEach(color => {
-                        const [r, g, b] = color;
-                        const avg = (r + g + b) / 3;
-                        const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2));
-                        const brightness = Math.max(r, g, b);
-                        const vibrancy = saturation + brightness;
-                        if (vibrancy > maxVibrancy && saturation > 30) {
-                            maxVibrancy = vibrancy;
-                            bestColor = color;
-                        }
-                    });
-                    const primaryRgb = bestColor.join(', ');
-                    const secondaryRgb = (palette[1] || bestColor).join(', ');
-                    document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb);
-                    document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb);
-                } catch (e) {
-                    console.error("ColorThief error:", e);
-                    document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246');
-                    document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119');
-                }
-            };
-            tempImg.onerror = () => {
-                 document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246');
-                 document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119');
-            }
-        }
         
+        function handleParallax(e) {
+            const { innerWidth: width, innerHeight: height } = window;
+            let x, y;
+            let strength; // Use a variable for strength
+
+            // Check if it's a device orientation event (mobile)
+            if (e.gamma !== undefined && e.beta !== undefined) {
+                strength = 30; // Increased strength for mobile tilt
+                x = (e.gamma + 90) * (width / 180);
+                y = (e.beta + 90) * (height / 180);
+            } else { // It's a mouse event (desktop)
+                strength = 15; // Default strength for mouse
+                x = e.clientX;
+                y = e.clientY;
+            }
+
+            const xPercent = (x / width - 0.5) * 2;
+            const yPercent = (y / height - 0.5) * 2;
+
+            const offsetX = -xPercent * strength;
+            const offsetY = -yPercent * strength;
+
+            imageBg.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        }
+
+        // --- All other functions (unchanged from the working version) ---
+        function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
         function loadBackgrounds() {
             bgGrid.innerHTML = '';
             builtInBacks.forEach(url => {
@@ -269,12 +260,10 @@
                 bgGrid.appendChild(imgContainer);
             });
         }
-        
         function selectBackground(imageDataUrl) { localStorage.setItem('background_image', imageDataUrl); imageBg.style.backgroundImage = `url('${imageDataUrl}')`; updateAccentColor(imageDataUrl); bgModal.classList.add('hidden'); }
         function handleBgUpload(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => selectBackground(e.target.result); reader.readAsDataURL(file); }
         function loadSavedBackground() { const savedBg = localStorage.getItem('background_image'); if (savedBg) { imageBg.style.backgroundImage = `url('${savedBg}')`; updateAccentColor(savedBg); } else if (builtInBacks.length > 0) { const randomBg = builtInBacks[Math.floor(Math.random() * builtInBacks.length)]; imageBg.style.backgroundImage = `url('${randomBg}')`; updateAccentColor(randomBg); } else { imageBg.style.backgroundImage = 'none'; } }
         function animateVisualizer() { animationFrameId = requestAnimationFrame(animateVisualizer); if (!equalizerEnabled || !analyser) { if(canvasCtx) canvasCtx.clearRect(0, 0, canvas.width, canvas.height); return; } analyser.getByteFrequencyData(dataArray); canvasCtx.clearRect(0, 0, canvas.width, canvas.height); const isCollapsed = document.body.classList.contains('playlist-collapsed'); const primaryRgb = getComputedStyle(document.documentElement).getPropertyValue('--primary-color-rgb'); const waveCount = 3; const sliceWidth = canvas.width / dataArray.length; const baseline = isCollapsed ? canvas.height / 2 : canvas.height - (player.offsetHeight / 2) - 10; const amplitude = isCollapsed ? 150 : 80; for (let j = 0; j < waveCount; j++) { canvasCtx.beginPath(); canvasCtx.moveTo(0, baseline); canvasCtx.strokeStyle = `rgba(${primaryRgb}, ${0.8 - j * 0.2})`; canvasCtx.lineWidth = 3 - j; for (let i = 0; i < dataArray.length; i++) { const v = dataArray[i] / 255.0; const y = baseline - (v * amplitude * (1 - j * 0.2)); const x = i * sliceWidth; canvasCtx.lineTo(x, y); } canvasCtx.lineTo(canvas.width, baseline); canvasCtx.stroke(); } }
-        function handleParallax(e) { const { innerWidth: width, innerHeight: height } = window; let x = e.clientX; let y = e.clientY; if (e.gamma !== undefined && e.beta !== undefined) { x = (e.gamma + 90) * (width / 180); y = (e.beta + 90) * (height / 180); } const xPercent = (x / width - 0.5) * 2; const yPercent = (y / height - 0.5) * 2; const strength = 15; const offsetX = -xPercent * strength; const offsetY = -yPercent * strength; imageBg.style.transform = `translate(${offsetX}px, ${offsetY}px)`; }
         function setupVisualizer() { if (audioContext) return; try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); sourceNode = audioContext.createMediaElementSource(audioPlayer); analyser = audioContext.createAnalyser(); analyser.fftSize = 256; sourceNode.connect(analyser); analyser.connect(audioContext.destination); dataArray = new Uint8Array(analyser.frequencyBinCount); resizeCanvas(); animateVisualizer(); } catch (e) { console.error("Could not initialize Web Audio API.", e); } }
         function resizeCanvas() { canvas.width = appContainer.clientWidth; canvas.height = appContainer.clientHeight; applyMarqueeToAll(); }
         function toggleEqualizer() { equalizerEnabled = !equalizerEnabled; toggleEqBtn.classList.toggle('accent-bg'); toggleEqBtn.classList.toggle('bg-gray-600', !equalizerEnabled); if (!equalizerEnabled && canvasCtx) canvasCtx.clearRect(0, 0, canvas.width, canvas.height); }
