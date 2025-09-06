@@ -179,7 +179,7 @@
     </div>
 
     <script>
-        // DOM Elements and State variables...
+        // DOM Elements
         const appContainer = document.getElementById('app');
         const imageBg = document.getElementById('image-bg');
         const canvas = document.getElementById('visualizerCanvas');
@@ -208,6 +208,8 @@
         const closeBgModal = document.getElementById('closeBgModal');
         const bgUpload = document.getElementById('bgUpload');
         const togglePlaylistBtn = document.getElementById('togglePlaylistBtn');
+
+        // State & Visualizer
         let playlist = [], currentIndex = -1, isPlaying = false, db;
         let audioContext, analyser, sourceNode, dataArray;
         let animationFrameId = null;
@@ -216,20 +218,47 @@
 
         audioPlayer.volume = 0.75;
         
-        // --- BUILT-IN BACKGROUNDS with RELATIVE PATHS ---
         const builtInBacks = [
-            'back/1.png',
-            'back/11.jpg',
-            'back/12.jpg',
-            'back/13.jpg',
-            'back/14.jpg',
-            'back/36.jpg',
-            'back/37.jpg',
-            'back/9.jpg'
+            'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg',
+            'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg'
         ];
 
-        // --- All functions (unchanged from the working version) ---
-        function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
+        function updateAccentColor(imageUrl) {
+            const tempImg = new Image();
+            tempImg.crossOrigin = "Anonymous"; 
+            tempImg.src = imageUrl;
+            tempImg.onload = () => {
+                try {
+                    const palette = colorThief.getPalette(tempImg, 3);
+                    let bestColor = palette[0];
+                    let maxVibrancy = 0;
+                    palette.forEach(color => {
+                        const [r, g, b] = color;
+                        const avg = (r + g + b) / 3;
+                        const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2));
+                        const brightness = Math.max(r, g, b);
+                        const vibrancy = saturation + brightness;
+                        if (vibrancy > maxVibrancy && saturation > 30) {
+                            maxVibrancy = vibrancy;
+                            bestColor = color;
+                        }
+                    });
+                    const primaryRgb = bestColor.join(', ');
+                    const secondaryRgb = (palette[1] || bestColor).join(', ');
+                    document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb);
+                    document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb);
+                } catch (e) {
+                    console.error("ColorThief error:", e);
+                    document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246');
+                    document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119');
+                }
+            };
+            tempImg.onerror = () => {
+                 document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246');
+                 document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119');
+            }
+        }
+        
         function loadBackgrounds() {
             bgGrid.innerHTML = '';
             builtInBacks.forEach(url => {
@@ -240,6 +269,7 @@
                 bgGrid.appendChild(imgContainer);
             });
         }
+        
         function selectBackground(imageDataUrl) { localStorage.setItem('background_image', imageDataUrl); imageBg.style.backgroundImage = `url('${imageDataUrl}')`; updateAccentColor(imageDataUrl); bgModal.classList.add('hidden'); }
         function handleBgUpload(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => selectBackground(e.target.result); reader.readAsDataURL(file); }
         function loadSavedBackground() { const savedBg = localStorage.getItem('background_image'); if (savedBg) { imageBg.style.backgroundImage = `url('${savedBg}')`; updateAccentColor(savedBg); } else if (builtInBacks.length > 0) { const randomBg = builtInBacks[Math.floor(Math.random() * builtInBacks.length)]; imageBg.style.backgroundImage = `url('${randomBg}')`; updateAccentColor(randomBg); } else { imageBg.style.backgroundImage = 'none'; } }
@@ -295,3 +325,4 @@
     </script>
 </body>
 </html>
+
