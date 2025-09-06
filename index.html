@@ -231,18 +231,19 @@
         let animationFrameId = null;
         let equalizerEnabled = true;
         let colorThief;
-        let currentMode = 'playlist'; // 'playlist' or 'radio'
+        let currentMode = 'playlist';
 
         audioPlayer.volume = 0.75;
         
         // --- BUILT-IN DATA ---
         const builtInBacks = [ 'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg', 'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg' ];
         const builtInRadioStations = [
-            { name: "Lofi Hip Hop", genre: "24/7 chilled beats", streamUrl: "https://stream.zeno.fm/v71bdg42p0quv", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
-            { name: "DNBRadio", genre: "Drum & Bass / Jungle", streamUrl: "https://dnbstream.com:8443/stream", artUrl: "https://i.imgur.com/uF1u7kC.png" },
-            { name: "SomaFM Fluid", genre: "Instrumental Post-Rock", streamUrl: "https://ice1.somafm.com/fluid-256-mp3", artUrl: "https://i.imgur.com/dJ4Z1xG.png" },
-            { name: "SomaFM Cliqhop", genre: "IDM / Glitch", streamUrl: "https://ice1.somafm.com/cliqhop-256-mp3", artUrl: "https://i.imgur.com/c5yJ8iH.png" },
-            { name: "Radio Paradise", genre: "Eclectic Rock Mix", streamUrl: "https://stream.radioparadise.com/mp3-320", artUrl: "https://i.imgur.com/3T6n22D.png" },
+            { name: "Lofi Radio", genre: "Chill / Lofi Hip-Hop", streamUrl: "https://air.lofiradio.ru/128.mp3", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
+            { name: "DNBFM", genre: "Drum & Bass", streamUrl: "https://air.dnbfm.ru/dnbfm-320.mp3", artUrl: "https://i.imgur.com/uF1u7kC.png" },
+            { name: "Radio Vibe", genre: "Pop / Dance", streamUrl: "https://air.radiovibe.ru/128.mp3", artUrl: "https://i.imgur.com/wO8gODc.png" },
+            { name: "Hip-Hop Radio", genre: "Hip-Hop / Rap", streamUrl: "https://air.radiohiphop.ru/128.mp3", artUrl: "https://i.imgur.com/qY7xT4K.png" },
+            { name: "SomaFM: Fluid Radio", genre: "Instrumental Post-Rock", streamUrl: "https://ice1.somafm.com/fluid-256-mp3", artUrl: "https://i.imgur.com/dJ4Z1xG.png" },
+            { name: "SomaFM: Cliqhop IDM", genre: "IDM / Glitch", streamUrl: "https://ice1.somafm.com/cliqhop-256-mp3", artUrl: "https://i.imgur.com/c5yJ8iH.png" }
         ];
         
         // --- LOGIC ---
