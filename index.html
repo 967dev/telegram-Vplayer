@@ -238,11 +238,11 @@
         // --- BUILT-IN DATA ---
         const builtInBacks = [ 'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg', 'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg' ];
         const builtInRadioStations = [
-            { name: "Lofi Girl", genre: "24/7 lofi hip hop beats", streamUrl: "https://stream.lofigirl.com/lofi", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
-            { name: "Bassdrive", genre: "Drum & Bass / Jungle", streamUrl: "https://radio.bassdrive.com/128", artUrl: "https://i.imgur.com/k6l6E5F.png" },
-            { name: "SomaFM Groove Salad", genre: "Ambient & Downtempo", streamUrl: "https://ice1.somafm.com/groovesalad-256-mp3", artUrl: "https://i.imgur.com/TMRKR0k.png" },
+            { name: "Lofi Hip Hop", genre: "24/7 chilled beats", streamUrl: "https://stream.zeno.fm/v71bdg42p0quv", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
+            { name: "DNBRadio", genre: "Drum & Bass / Jungle", streamUrl: "https://dnbstream.com:8443/stream", artUrl: "https://i.imgur.com/uF1u7kC.png" },
+            { name: "SomaFM Fluid", genre: "Instrumental Post-Rock", streamUrl: "https://ice1.somafm.com/fluid-256-mp3", artUrl: "https://i.imgur.com/dJ4Z1xG.png" },
+            { name: "SomaFM Cliqhop", genre: "IDM / Glitch", streamUrl: "https://ice1.somafm.com/cliqhop-256-mp3", artUrl: "https://i.imgur.com/c5yJ8iH.png" },
             { name: "Radio Paradise", genre: "Eclectic Rock Mix", streamUrl: "https://stream.radioparadise.com/mp3-320", artUrl: "https://i.imgur.com/3T6n22D.png" },
-            { name: "DEF CON Radio", genre: "Eclectic Electronic", streamUrl: "https://ice1.somafm.com/defcon-256-mp3", artUrl: "https://i.imgur.com/4gL1qfY.png" }
         ];
         
         // --- LOGIC ---
@@ -295,7 +295,7 @@
             currentTrackTitle.textContent = station.name;
             currentTrackArtist.textContent = station.genre;
             currentTrackArt.src = station.artUrl;
-            progressWrapper.classList.add('hidden'); // Hide progress bar for streams
+            progressWrapper.classList.add('hidden');
             
             audioPlayer.play().then(() => {
                 if (audioContext.state === 'suspended') audioContext.resume();
@@ -304,16 +304,14 @@
             }).catch(e => { console.error("Radio playback error:", e); setPlayingState(false); });
         }
         
-        // --- Modified Player Controls ---
         function togglePlayPause() {
             if(currentMode === 'playlist') {
                 if (currentIndex === -1 && playlist.length > 0) return playTrack(0);
                 if (currentIndex === -1) return;
-            } else { // radio
+            } else {
                 if (currentRadioIndex === -1 && builtInRadioStations.length > 0) return playRadioStation(0);
                 if (currentRadioIndex === -1) return;
             }
-            
             const action = isPlaying ? 'pause' : 'play';
             if (audioContext && audioContext.state === 'suspended') {
                  audioContext.resume().then(() => audioPlayer[action]());
@@ -336,7 +334,6 @@
             }
         }
         
-        // --- The rest of the functions are mostly unchanged ---
         function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
         function loadBackgrounds() { bgGrid.innerHTML = ''; builtInBacks.forEach(url => { const imgContainer = document.createElement('div'); imgContainer.className = 'cursor-pointer aspect-square rounded-md overflow-hidden transition-transform hover:scale-105'; imgContainer.innerHTML = `<img src="${url}" class="w-full h-full object-cover" loading="lazy">`; imgContainer.onclick = () => selectBackground(url); bgGrid.appendChild(imgContainer); }); }
         function selectBackground(imageDataUrl) { localStorage.setItem('background_image', imageDataUrl); imageBg.style.backgroundImage = `url('${imageDataUrl}')`; updateAccentColor(imageDataUrl); bgModal.classList.add('hidden'); }
