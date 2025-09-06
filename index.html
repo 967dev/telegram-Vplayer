@@ -216,17 +216,19 @@
 
         audioPlayer.volume = 0.75;
         
+        // --- BUILT-IN BACKGROUNDS with RELATIVE PATHS ---
         const builtInBacks = [
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/1.png?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/11.jpg?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/12.jpg?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/13.jpg?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/14.jpg?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/36.jpg?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/37.jpg?raw=true',
-            'https://github.com/967dev/telegram-Vplayer/blob/main/back/9.jpg?raw=true'
+            'back/1.png',
+            'back/11.jpg',
+            'back/12.jpg',
+            'back/13.jpg',
+            'back/14.jpg',
+            'back/36.jpg',
+            'back/37.jpg',
+            'back/9.jpg'
         ];
 
+        // --- All functions (unchanged from the working version) ---
         function updateAccentColor(imageUrl) { const tempImg = new Image(); tempImg.crossOrigin = "Anonymous"; tempImg.src = imageUrl; tempImg.onload = () => { try { const palette = colorThief.getPalette(tempImg, 3); let bestColor = palette[0]; let maxVibrancy = 0; palette.forEach(color => { const [r, g, b] = color; const avg = (r + g + b) / 3; const saturation = Math.sqrt(Math.pow(r - avg, 2) + Math.pow(g - avg, 2) + Math.pow(b - avg, 2)); const brightness = Math.max(r, g, b); const vibrancy = saturation + brightness; if (vibrancy > maxVibrancy && saturation > 30) { maxVibrancy = vibrancy; bestColor = color; } }); const primaryRgb = bestColor.join(', '); const secondaryRgb = (palette[1] || bestColor).join(', '); document.documentElement.style.setProperty('--primary-color-rgb', primaryRgb); document.documentElement.style.setProperty('--secondary-color-rgb', secondaryRgb); } catch (e) { console.error("ColorThief error:", e); document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }; tempImg.onerror = () => { document.documentElement.style.setProperty('--primary-color-rgb', '139, 92, 246'); document.documentElement.style.setProperty('--secondary-color-rgb', '219, 39, 119'); } }
         function loadBackgrounds() {
             bgGrid.innerHTML = '';
@@ -250,11 +252,7 @@
         function saveTrackToDB(file) { const transaction = db.transaction(['tracks'], 'readwrite'); const store = transaction.objectStore('tracks'); const trackData = { file: file, fileName: file.name.replace(/\.[^/.]+$/, ""), artistName: "Local File" }; store.add(trackData).onsuccess = (event) => { const track = { ...trackData, id: event.target.result }; delete track.file; playlist.push(track); displayPlaylist(); }; }
         function loadPlaylistFromDB() { db.transaction('tracks').objectStore('tracks').getAll().onsuccess = (event) => { playlist = event.target.result.map(({id, fileName, artistName}) => ({id, fileName, artistName})); displayPlaylist(); }; }
         function deleteTrack(index) { if (index < 0 || index >= playlist.length) return; const trackId = playlist[index].id; const transaction = db.transaction(['tracks'], 'readwrite'); transaction.objectStore('tracks').delete(trackId).onsuccess = () => { if (index === currentIndex) { audioPlayer.pause(); audioPlayer.src = ''; player.classList.add('translate-y-full'); currentIndex = -1; setPlayingState(false); } else if (index < currentIndex) { currentIndex--; } playlist.splice(index, 1); displayPlaylist(); }; }
-        function handleFiles(event) {
-            Array.from(event.target.files).forEach(saveTrackToDB);
-            // FIX: Reset the input value to allow re-uploading the same file
-            audioUpload.value = null; 
-        }
+        function handleFiles(event) { Array.from(event.target.files).forEach(saveTrackToDB); audioUpload.value = null; }
         function applyMarqueeIfNeeded(textElement) { const wrapper = textElement.parentElement; if (!wrapper) return; const shouldScroll = textElement.scrollWidth > wrapper.clientWidth; wrapper.classList.toggle('is-scrolling', shouldScroll); }
         function applyMarqueeToAll() { if(currentTrackTitle) applyMarqueeIfNeeded(currentTrackTitle); playlistContainer.querySelectorAll('.marquee-text').forEach(applyMarqueeIfNeeded); }
         function displayPlaylist() { playlistContainer.innerHTML = ''; initialMessage.classList.toggle('hidden', playlist.length > 0); playlist.forEach((track, index) => { const trackElement = document.createElement('div'); trackElement.className = 'track-item flex items-center justify-between p-3 rounded-xl bg-black/20 backdrop-blur-lg border border-white/5 hover:bg-black/40 cursor-pointer transition-colors duration-200'; const trackInfoContainer = document.createElement('div'); trackInfoContainer.className = 'flex items-center flex-grow overflow-hidden mr-2 w-0 min-w-0'; trackInfoContainer.innerHTML = `<div class="w-12 h-12 rounded-md mr-4 bg-white/10 flex items-center justify-center flex-shrink-0"><i class="fas fa-music text-gray-300 text-xl"></i></div><div class="flex-grow overflow-hidden w-0 min-w-0"><div class="marquee-wrapper"><p class="marquee-text font-semibold">${track.fileName}</p></div><p class="text-sm text-gray-400 truncate">${track.artistName}</p></div>`; trackInfoContainer.addEventListener('click', () => playTrack(index)); const deleteButton = document.createElement('button'); deleteButton.className = 'delete-btn flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-colors'; deleteButton.innerHTML = `<i class="fas fa-trash-alt"></i>`; deleteButton.addEventListener('click', (e) => { e.stopPropagation(); deleteTrack(index); }); trackElement.appendChild(trackInfoContainer); trackElement.appendChild(deleteButton); playlistContainer.appendChild(trackElement); applyMarqueeIfNeeded(trackElement.querySelector('.marquee-text')); }); updateActiveTrackUI(); }
@@ -297,4 +295,3 @@
     </script>
 </body>
 </html>
-
