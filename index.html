@@ -67,6 +67,7 @@
         main {
             -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 80px, black calc(100% - 80px), transparent 100%);
             mask-image: linear-gradient(to bottom, transparent 0%, black 80px, black calc(100% - 80px), transparent 100%);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .accent-bg {
             background-color: rgb(var(--primary-color-rgb));
@@ -84,11 +85,15 @@
             background-color: rgba(var(--primary-color-rgb), 0.2);
             border-color: rgba(var(--primary-color-rgb), 0.4);
         }
-        main#playlistContainer {
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        
+        /* Styles for collapsed state */
         body.playlist-collapsed main#playlistContainer {
             transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        body.playlist-collapsed main#radioContainer {
+            transform: translateX(100%);
             opacity: 0;
             pointer-events: none;
         }
@@ -234,10 +239,10 @@
         const builtInBacks = [ 'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg', 'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg' ];
         const builtInRadioStations = [
             { name: "Lofi Girl", genre: "24/7 lofi hip hop beats", streamUrl: "https://stream.lofigirl.com/lofi", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
-            { name: "Radio Paradise", genre: "Eclectic Rock Mix", streamUrl: "https://stream.radioparadise.com/mp3-320", artUrl: "https://i.imgur.com/3T6n22D.png" },
+            { name: "Bassdrive", genre: "Drum & Bass / Jungle", streamUrl: "https://radio.bassdrive.com/128", artUrl: "https://i.imgur.com/k6l6E5F.png" },
             { name: "SomaFM Groove Salad", genre: "Ambient & Downtempo", streamUrl: "https://ice1.somafm.com/groovesalad-256-mp3", artUrl: "https://i.imgur.com/TMRKR0k.png" },
-            { name: "Classic Rock Florida", genre: "Classic Rock Hits", streamUrl: "https://ice41.securenetsystems.net/CRF", artUrl: "https://i.imgur.com/K3cyk1s.png" },
-            { name: "KEXP 90.3 FM", genre: "Indie & Alternative", streamUrl: "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", artUrl: "https://i.imgur.com/j4Yl3aV.png" },
+            { name: "Radio Paradise", genre: "Eclectic Rock Mix", streamUrl: "https://stream.radioparadise.com/mp3-320", artUrl: "https://i.imgur.com/3T6n22D.png" },
+            { name: "DEF CON Radio", genre: "Eclectic Electronic", streamUrl: "https://ice1.somafm.com/defcon-256-mp3", artUrl: "https://i.imgur.com/4gL1qfY.png" }
         ];
         
         // --- LOGIC ---
