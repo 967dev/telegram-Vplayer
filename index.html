@@ -20,12 +20,14 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
             font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
             background-color: #000;
-            overflow: hidden;
             overscroll-behavior: none;
-            height: var(--tg-viewport-height, 100vh);
         }
         #app {
             height: 100%;
@@ -97,15 +99,18 @@
             background-color: rgba(var(--primary-color-rgb), 0.2);
             border-color: rgba(var(--primary-color-rgb), 0.4);
         }
-        body.playlist-collapsed main#playlistContainer,
+        
+        /* Styles for collapsed state */
+        body.playlist-collapsed main#playlistContainer {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
         body.playlist-collapsed main#radioContainer {
             transform: translateX(100%);
             opacity: 0;
             pointer-events: none;
         }
-         body.playlist-collapsed main#playlistContainer {
-             transform: translateX(-100%);
-         }
         body.playlist-collapsed #image-bg {
             filter: blur(0px);
         }
@@ -179,7 +184,7 @@
                 <input type="range" id="volumeSlider" min="0" max="100" value="75" class="flex-grow">
                 <i class="fas fa-volume-high text-gray-400"></i>
             </div>
-            <audio id="audioPlayer"></audio> <!-- crossOrigin removed, will be set by JS -->
+            <audio id="audioPlayer" ></audio> <!-- crossOrigin removed, will be set by JS -->
         </footer>
     </div>
     
@@ -247,10 +252,11 @@
         // --- BUILT-IN DATA ---
         const builtInBacks = [ 'back/1.png', 'back/11.jpg', 'back/12.jpg', 'back/13.jpg', 'back/14.jpg', 'back/36.jpg', 'back/37.jpg', 'back/9.jpg' ];
         const builtInRadioStations = [
-            { name: "Lofi Radio", genre: "Chill / Lofi Hip-Hop", streamUrl: "https://boxradio-edge-00.streamafrica.net/lofi", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
-            { name: "NRJ DnB", genre: "Drum & Bass", streamUrl: "https://edge04.cdn.bitflip.ee:8888/NRJdnb", artUrl: "https://i.imgur.com/uF1u7kC.png" },
+            { name: "Lofi Radio", genre: "Chill / Lofi Hip-Hop", streamUrl: "https://air.lofiradio.ru/128.mp3", artUrl: "https://i.imgur.com/gSnO21I.jpeg" },
+            { name: "DNBFM", genre: "Drum & Bass", streamUrl: "https://air.dnbfm.ru/dnbfm-320.mp3", artUrl: "https://i.imgur.com/uF1u7kC.png" },
+            { name: "Radio Vibe", genre: "Pop / Dance", streamUrl: "https://air.radiovibe.ru/128.mp3", artUrl: "https://i.imgur.com/wO8gODc.png" },
+            { name: "Hip-Hop Radio", genre: "Hip-Hop / Rap", streamUrl: "https://air.radiohiphop.ru/128.mp3", artUrl: "https://i.imgur.com/qY7xT4K.png" },
             { name: "EDM Radio", genre: "Electronic Dance Music", streamUrl: "https://edmradio.stream.laut.fm/edmradio", artUrl: "https://i.imgur.com/xQ9z3L1.png" },
-            { name: "1000 Hiphop", genre: "Hip-Hop / Rap", streamUrl: "https://1000hiphop.stream.laut.fm/1000hiphop", artUrl: "https://i.imgur.com/qY7xT4K.png" },
             { name: "Like POP", genre: "Pop Hits", streamUrl: "https://likeradiostream.com/likepop", artUrl: "https://i.imgur.com/J8tS2qJ.png" },
             { name: "Classic Rock", genre: "Rock Anthems", streamUrl: "https://live-bauerno.sharp-stream.com/simulcast3_no.mp3", artUrl: "https://i.imgur.com/K3cyk1s.png" }
         ];
@@ -298,22 +304,16 @@
         
         function playRadioStation(index) {
             if (index < 0 || index >= builtInRadioStations.length) return;
-            
-            // FIX: Remove crossOrigin for radio streams to avoid CORS issues
             audioPlayer.removeAttribute('crossOrigin');
-            canvas.style.opacity = 0; // Hide visualizer as it won't work
-
+            canvas.style.opacity = 0; 
             if (!audioContext) setupVisualizer();
-            
             currentRadioIndex = index;
             const station = builtInRadioStations[index];
-            
             audioPlayer.src = station.streamUrl;
             currentTrackTitle.textContent = station.name;
             currentTrackArtist.textContent = station.genre;
             currentTrackArt.src = "https://placehold.co/64x64/1f2937/4b5563?text=Radio";
             progressWrapper.classList.add('hidden');
-            
             audioPlayer.play().then(() => {
                 if (audioContext.state === 'suspended') audioContext.resume();
                 setPlayingState(true);
@@ -323,13 +323,9 @@
         
         function playTrack(index) {
             if (index < 0 || index >= playlist.length) return;
-            
-            // FIX: Add crossOrigin back for local files to enable visualizer
             audioPlayer.setAttribute('crossOrigin', 'anonymous');
             canvas.style.opacity = 1;
-
             if (!audioContext) setupVisualizer();
-
             currentIndex = index;
             const trackInfo = playlist[currentIndex];
             db.transaction('tracks').objectStore('tracks').get(trackInfo.id).onsuccess = (event) => {
